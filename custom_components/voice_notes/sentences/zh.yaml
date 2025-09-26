@@ -3,12 +3,15 @@ intents:
   AddVoiceNote:
     data:
       - sentences:
-          - "记个笔记 内容是 {content}"
-          - "记录笔记 {content}"
-          - "添加笔记 {content}"
-          - "新建笔记 {content}"
+          - "记个笔记[，]内容是 {content}"
+          - "记录笔记[，]{content}"
+          - "添加笔记[，]{content}"
+          - "新建笔记[，]{content}"
           - "记下 {content}"
-          - "笔记 {content}"
+          - "笔记[，]{content}"
+          - "帮我记录 {content}"
+          - "帮我记下 {content}"
+          - "我要记个笔记[，]{content}"
         slots:
           content:
             description: "笔记内容"
