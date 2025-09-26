@@ -3,7 +3,7 @@
   "name": "Voice Notes",
   "codeowners": ["@xiaofan17"],
   "config_flow": true,
-  "dependencies": ["homeassistant"],
+  "dependencies": [],
   "documentation": "https://github.com/xiaofan17/voice_notes",
   "integration_type": "service",
   "iot_class": "local_push",
