@@ -46,7 +46,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Register intent handler
     intent.async_register(hass, AddNoteIntentHandler(entry.entry_id))
     
-    # Register services
+    # Register services only once (for the first entry)
+    if len(hass.data[DOMAIN]) == 1:
+        await _register_services(hass)
+    
+    # Set up platforms
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    
+    return True
+
+
+async def _register_services(hass: HomeAssistant) -> None:
+    """Register services for the Voice Notes integration."""
+    
     async def add_note_service(call: ServiceCall) -> None:
         """Handle add_note service call."""
         content = call.data.get("content", "")
@@ -55,8 +67,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.warning("No content provided for add_note service")
             return
         
-        # Get storage data
-        entry_data = hass.data[DOMAIN][entry.entry_id]
+        # Get the first available entry (assuming single entry for now)
+        if not hass.data.get(DOMAIN):
+            _LOGGER.error("Voice Notes integration not loaded")
+            return
+            
+        entry_id = next(iter(hass.data[DOMAIN].keys()))
+        entry_data = hass.data[DOMAIN][entry_id]
         notes_data = entry_data[DATA_NOTES]
         store = entry_data["store"]
         
@@ -95,8 +112,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.warning("No note_id provided for complete_note service")
             return
         
-        # Get storage data
-        entry_data = hass.data[DOMAIN][entry.entry_id]
+        # Get the first available entry
+        if not hass.data.get(DOMAIN):
+            _LOGGER.error("Voice Notes integration not loaded")
+            return
+            
+        entry_id = next(iter(hass.data[DOMAIN].keys()))
+        entry_data = hass.data[DOMAIN][entry_id]
         notes_data = entry_data[DATA_NOTES]
         store = entry_data["store"]
         
@@ -132,8 +154,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.warning("No note_id provided for delete_note service")
             return
         
-        # Get storage data
-        entry_data = hass.data[DOMAIN][entry.entry_id]
+        # Get the first available entry
+        if not hass.data.get(DOMAIN):
+            _LOGGER.error("Voice Notes integration not loaded")
+            return
+            
+        entry_id = next(iter(hass.data[DOMAIN].keys()))
+        entry_data = hass.data[DOMAIN][entry_id]
         notes_data = entry_data[DATA_NOTES]
         store = entry_data["store"]
         
@@ -188,10 +215,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         })
     )
     
-    # Set up platforms
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    
-    return True
+    _LOGGER.info("Voice Notes services registered successfully")
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -199,10 +223,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     
     if unload_ok:
-        # Remove services
-        hass.services.async_remove(DOMAIN, "add_note")
-        hass.services.async_remove(DOMAIN, "complete_note")
-        hass.services.async_remove(DOMAIN, "delete_note")
+        # Remove services only when the last entry is removed
+        if len(hass.data[DOMAIN]) == 1:
+            hass.services.async_remove(DOMAIN, "add_note")
+            hass.services.async_remove(DOMAIN, "complete_note")
+            hass.services.async_remove(DOMAIN, "delete_note")
+            _LOGGER.info("Voice Notes services unregistered")
         
         hass.data[DOMAIN].pop(entry.entry_id)
     
