@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="voiceGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#357ABD;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="128" cy="128" r="120" fill="url(#voiceGradient)" stroke="#2C5F8A" stroke-width="4"/>
+  
+  <!-- Microphone body -->
+  <rect x="108" y="80" width="40" height="60" rx="20" ry="20" fill="#FFFFFF" opacity="0.9"/>
+  
+  <!-- Microphone stand -->
+  <rect x="125" y="140" width="6" height="30" fill="#FFFFFF" opacity="0.8"/>
+  
+  <!-- Microphone base -->
+  <ellipse cx="128" cy="175" rx="25" ry="8" fill="#FFFFFF" opacity="0.7"/>
+  
+  <!-- Sound waves -->
+  <path d="M 160 100 Q 180 110 180 128 Q 180 146 160 156" stroke="#FFFFFF" stroke-width="3" fill="none" opacity="0.8"/>
+  <path d="M 170 90 Q 200 105 200 128 Q 200 151 170 166" stroke="#FFFFFF" stroke-width="2" fill="none" opacity="0.6"/>
+  
+  <!-- Notes symbols -->
+  <circle cx="85" cy="65" r="4" fill="#FFFFFF" opacity="0.7"/>
+  <rect x="89" y="45" width="2" height="20" fill="#FFFFFF" opacity="0.7"/>
+  <path d="M 89 45 Q 95 42 95 48" stroke="#FFFFFF" stroke-width="2" fill="none" opacity="0.7"/>
+  
+  <circle cx="180" cy="190" r="3" fill="#FFFFFF" opacity="0.6"/>
+  <rect x="183" y="175" width="1.5" height="15" fill="#FFFFFF" opacity="0.6"/>
+  <path d="M 183 175 Q 188 173 188 178" stroke="#FFFFFF" stroke-width="1.5" fill="none" opacity="0.6"/>
+</svg>
