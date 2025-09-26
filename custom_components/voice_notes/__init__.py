@@ -6,11 +6,12 @@ import logging
 from datetime import datetime
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers import intent
+import voluptuous as vol
 
 from .const import DOMAIN, INTENT_ADD_NOTE, DATA_NOTES, STORAGE_KEY, STORAGE_VERSION
 
@@ -45,6 +46,148 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Register intent handler
     intent.async_register(hass, AddNoteIntentHandler(entry.entry_id))
     
+    # Register services
+    async def add_note_service(call: ServiceCall) -> None:
+        """Handle add_note service call."""
+        content = call.data.get("content", "")
+        
+        if not content:
+            _LOGGER.warning("No content provided for add_note service")
+            return
+        
+        # Get storage data
+        entry_data = hass.data[DOMAIN][entry.entry_id]
+        notes_data = entry_data[DATA_NOTES]
+        store = entry_data["store"]
+        
+        # Create new note
+        note = {
+            "id": len(notes_data["notes"]) + 1,
+            "content": content,
+            "created_at": datetime.now().isoformat(),
+            "completed": False
+        }
+        
+        # Add note to storage
+        notes_data["notes"].append(note)
+        
+        # Save to persistent storage
+        await store.async_save(notes_data)
+        
+        # Update sensor state
+        hass.states.async_set(
+            f"sensor.voice_notes_count",
+            len([n for n in notes_data["notes"] if not n["completed"]]),
+            {
+                "notes": notes_data["notes"],
+                "last_note": note,
+                "total_notes": len(notes_data["notes"])
+            }
+        )
+        
+        _LOGGER.info("Added voice note via service: %s", content)
+    
+    async def complete_note_service(call: ServiceCall) -> None:
+        """Handle complete_note service call."""
+        note_id = call.data.get("note_id")
+        
+        if note_id is None:
+            _LOGGER.warning("No note_id provided for complete_note service")
+            return
+        
+        # Get storage data
+        entry_data = hass.data[DOMAIN][entry.entry_id]
+        notes_data = entry_data[DATA_NOTES]
+        store = entry_data["store"]
+        
+        # Find and complete the note
+        for note in notes_data["notes"]:
+            if note["id"] == note_id:
+                note["completed"] = True
+                break
+        else:
+            _LOGGER.warning("Note with id %s not found", note_id)
+            return
+        
+        # Save to persistent storage
+        await store.async_save(notes_data)
+        
+        # Update sensor state
+        hass.states.async_set(
+            f"sensor.voice_notes_count",
+            len([n for n in notes_data["notes"] if not n["completed"]]),
+            {
+                "notes": notes_data["notes"],
+                "total_notes": len(notes_data["notes"])
+            }
+        )
+        
+        _LOGGER.info("Completed voice note with id: %s", note_id)
+    
+    async def delete_note_service(call: ServiceCall) -> None:
+        """Handle delete_note service call."""
+        note_id = call.data.get("note_id")
+        
+        if note_id is None:
+            _LOGGER.warning("No note_id provided for delete_note service")
+            return
+        
+        # Get storage data
+        entry_data = hass.data[DOMAIN][entry.entry_id]
+        notes_data = entry_data[DATA_NOTES]
+        store = entry_data["store"]
+        
+        # Find and delete the note
+        original_count = len(notes_data["notes"])
+        notes_data["notes"] = [note for note in notes_data["notes"] if note["id"] != note_id]
+        
+        if len(notes_data["notes"]) == original_count:
+            _LOGGER.warning("Note with id %s not found", note_id)
+            return
+        
+        # Save to persistent storage
+        await store.async_save(notes_data)
+        
+        # Update sensor state
+        hass.states.async_set(
+            f"sensor.voice_notes_count",
+            len([n for n in notes_data["notes"] if not n["completed"]]),
+            {
+                "notes": notes_data["notes"],
+                "total_notes": len(notes_data["notes"])
+            }
+        )
+        
+        _LOGGER.info("Deleted voice note with id: %s", note_id)
+    
+    # Register the services
+    hass.services.async_register(
+        DOMAIN,
+        "add_note",
+        add_note_service,
+        schema=vol.Schema({
+            vol.Required("content"): cv.string,
+        })
+    )
+    
+    hass.services.async_register(
+        DOMAIN,
+        "complete_note",
+        complete_note_service,
+        schema=vol.Schema({
+            vol.Required("note_id"): cv.positive_int,
+        })
+    )
+    
+    hass.services.async_register(
+        DOMAIN,
+        "delete_note",
+        delete_note_service,
+        schema=vol.Schema({
+            vol.Required("note_id"): cv.positive_int,
+        })
+    )
+    
     # Set up platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     
@@ -56,6 +199,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     
     if unload_ok:
+        # Remove services
+        hass.services.async_remove(DOMAIN, "add_note")
+        hass.services.async_remove(DOMAIN, "complete_note")
+        hass.services.async_remove(DOMAIN, "delete_note")
+        
         hass.data[DOMAIN].pop(entry.entry_id)
     
     return unload_ok
