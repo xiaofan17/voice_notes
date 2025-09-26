@@ -1,0 +1,14 @@
+language: "en"
+intents:
+  AddVoiceNote:
+    data:
+      - sentences:
+          - "add note {content}"
+          - "create note {content}"
+          - "record note {content}"
+          - "take note {content}"
+          - "note {content}"
+        slots:
+          content:
+            description: "Note content"
+            required: true
